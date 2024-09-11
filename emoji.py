@@ -1,7 +1,11 @@
 from googleapiclient.discovery import build
 from textblob import TextBlob
-from fpdf import FPDF
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph
+from reportlab.lib.units import inch
 import getpass
+import html
 
 
 # Function to get API key from user
@@ -18,19 +22,6 @@ def get_api_service_name():
 def get_api_version():
     version = input('Enter the API version (default is "v3"): ')
     return version if version else "v3"
-
-
-def get_video_details(video_id, api_key, api_service_name, api_version):
-    """Fetch video details from YouTube."""
-    youtube = build(api_service_name, api_version, developerKey=api_key)
-    request = youtube.videos().list(part="snippet", id=video_id)
-    response = request.execute()
-    video_info = response["items"][0]["snippet"]
-    return {
-        "title": video_info["title"],
-        "channel": video_info["channelTitle"],
-        "url": f"https://www.youtube.com/watch?v={video_id}",
-    }
 
 
 def get_comments(video_id, api_key, api_service_name, api_version):
@@ -82,53 +73,33 @@ def filter_comments(comments, keyword):
 
 
 def sanitize_text(text):
-    """Replace problematic characters with a space or other character."""
-    return text.replace("\u2019", "'").encode("latin-1", "replace").decode("latin-1")
+    """Sanitize text to avoid issues with PDF generation."""
+    text = text.replace("\u2019", "'")
+    text = html.escape(text)  # Escape HTML characters
+    return text
 
 
-class PDF(FPDF):
-    def header(self):
-        if self.page_no() == 1:
-            self.set_font("DejaVuSans", style="B", size=16)
-            self.cell(0, 10, "YouTube Comments Analysis Report", 0, 1, "C")
-            self.ln(10)
-        else:
-            self.set_font("DejaVuSans", size=12)
-            self.cell(0, 10, "", 0, 1, "C")
-
-    def footer(self):
-        self.set_y(-15)
-        self.set_font("DejaVuSans", size=8)
-        self.cell(0, 10, f"Page {self.page_no()}", 0, 0, "C")
-
-
-def generate_pdf(comments, filtered_comments, keyword, video_details):
+def generate_pdf(comments, filtered_comments, keyword, video_id):
     """Generate a PDF report of the comments."""
-    pdf = PDF()
+    filename = "youtube_comments_analysis.pdf"
+    document = SimpleDocTemplate(filename, pagesize=letter)
+    styles = getSampleStyleSheet()
+    style_normal = styles["Normal"]
+    style_title = styles["Title"]
 
-    # Add the DejaVuSans font
-    pdf.add_font("DejaVuSans", "", "fonts/DejaVuSans.ttf", uni=True)
-    pdf.add_font("DejaVuSans", "B", "fonts/DejaVuSans-Bold.ttf", uni=True)
+    content = []
 
-    pdf.add_page()
-    pdf.set_font("DejaVuSans", size=12)
-
-    # Add title with video details
-    pdf.set_font("DejaVuSans", style="B", size=12)
-
-    pdf.cell(0, 10, f"Video Title: {video_details['title']}", 0, 1, "L")
-    pdf.cell(0, 10, f"Channel: {video_details['channel']}", 0, 1, "L")
-    pdf.cell(0, 10, f"Video URL: {video_details['url']}", 0, 1, "L")
-    pdf.ln(10)
+    # Add title with video link and title
+    title = f"YouTube Comments Analysis for Video: {video_id}"
+    content.append(Paragraph(title, style_title))
 
     def add_comments_to_pdf(title, comments_list):
-        pdf.set_font("DejaVuSans", style="B", size=12)
-        pdf.cell(0, 10, title, 0, 1, "L")
-        pdf.set_font("DejaVuSans", size=12)
+        content.append(Paragraph(title, style_normal))
         for comment in comments_list:
             sanitized_text = sanitize_text(comment["text"])
-            pdf.multi_cell(0, 10, f"{comment['author']}: {sanitized_text}")
-            pdf.ln()
+            comment_text = f"{comment['author']}: {sanitized_text}"
+            content.append(Paragraph(comment_text, style_normal))
+        content.append(Paragraph("<br/>", style_normal))  # Add space between sections
 
     # Add Filtered Comments
     add_comments_to_pdf(f"Filtered Comments for Keyword: {keyword}", filtered_comments)
@@ -143,8 +114,9 @@ def generate_pdf(comments, filtered_comments, keyword, video_details):
         "Negative Comments:", [c for c in comments if c["sentiment"] == "Negative"]
     )
 
-    # Save PDF
-    pdf.output("youtube_comments_analysis.pdf")
+    # Build PDF
+    document.build(content)
+    print(f"PDF generated: {filename}")
 
 
 def main(video_id, keyword):
@@ -154,9 +126,6 @@ def main(video_id, keyword):
     # Get API service name and version from user
     api_service_name = get_api_service_name()
     api_version = get_api_version()
-
-    # Fetch video details
-    video_details = get_video_details(video_id, api_key, api_service_name, api_version)
 
     # Fetch comments from YouTube
     comments = get_comments(video_id, api_key, api_service_name, api_version)
@@ -169,8 +138,7 @@ def main(video_id, keyword):
     filtered_comments = filter_comments(comments, keyword)
 
     # Generate the PDF report
-    generate_pdf(comments, filtered_comments, keyword, video_details)
-    print("PDF generated: youtube_comments_analysis.pdf")
+    generate_pdf(comments, filtered_comments, keyword, video_id)
 
 
 # Example usage
