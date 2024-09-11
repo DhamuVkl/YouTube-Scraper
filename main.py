@@ -3,18 +3,22 @@ from textblob import TextBlob
 from fpdf import FPDF
 import getpass
 
+
 # Function to get API key from user
 def get_api_key():
-    return getpass.getpass(prompt='Enter your YouTube Data API key: ')
+    return getpass.getpass(prompt="Enter your YouTube Data API key: ")
+
 
 # Function to get API service name from user
 def get_api_service_name():
     return input('Enter the API service name (default is "youtube"): ') or "youtube"
 
+
 # Function to get API version from user
 def get_api_version():
     version = input('Enter the API version (default is "v3"): ')
     return version if version else "v3"
+
 
 def get_comments(video_id, api_key, api_service_name, api_version):
     """Fetch comments from a YouTube video."""
@@ -43,6 +47,7 @@ def get_comments(video_id, api_key, api_service_name, api_version):
 
     return comments
 
+
 def analyze_sentiment(comment):
     """Analyze the sentiment of a comment."""
     analysis = TextBlob(comment)
@@ -53,6 +58,7 @@ def analyze_sentiment(comment):
     else:
         return "Neutral"
 
+
 def filter_comments(comments, keyword):
     """Filter comments based on a keyword."""
     filtered_comments = []
@@ -61,9 +67,11 @@ def filter_comments(comments, keyword):
             filtered_comments.append(comment)
     return filtered_comments
 
+
 def sanitize_text(text):
     """Replace problematic characters with a space or other character."""
     return text.replace("\u2019", "'").encode("latin-1", "replace").decode("latin-1")
+
 
 class PDF(FPDF):
     def header(self):
@@ -74,6 +82,7 @@ class PDF(FPDF):
         self.set_y(-15)
         self.set_font("DejaVuSans", size=8)
         self.cell(0, 10, f"Page {self.page_no()}", 0, 0, "C")
+
 
 def generate_pdf(comments, filtered_comments, keyword, video_id):
     """Generate a PDF report of the comments."""
@@ -114,6 +123,7 @@ def generate_pdf(comments, filtered_comments, keyword, video_id):
     # Save PDF
     pdf.output("youtube_comments_analysis.pdf")
 
+
 def main(video_id, keyword):
     # Get API key from user
     api_key = get_api_key()
@@ -135,6 +145,7 @@ def main(video_id, keyword):
     # Generate the PDF report
     generate_pdf(comments, filtered_comments, keyword, video_id)
     print("PDF generated: youtube_comments_analysis.pdf")
+
 
 # Example usage
 if __name__ == "__main__":
