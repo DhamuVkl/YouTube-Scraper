@@ -74,6 +74,11 @@ class PDF(FPDF):
 def generate_pdf(comments, filtered_comments, keyword):
     """Generate a PDF report of the comments."""
     pdf = PDF()
+
+    # Add the DejaVuSans font
+    pdf.add_font("DejaVuSans", "", "fonts/DejaVuSans.ttf", uni=True)
+    pdf.add_font("DejaVuSans", "B", "fonts/DejaVuSans-Bold.ttf", uni=True)
+
     pdf.add_page()
     pdf.set_font("DejaVuSans", size=12)
 
