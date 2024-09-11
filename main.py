@@ -8,6 +8,18 @@ YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 
 
+def get_video_details(video_id):
+    """Fetch video details from YouTube."""
+    youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=API_KEY)
+    request = youtube.videos().list(
+        part="snippet",
+        id=video_id
+    )
+    response = request.execute()
+    video = response["items"][0]["snippet"]
+    return video["title"], f"https://www.youtube.com/watch?v={video_id}"
+
+
 def get_comments(video_id):
     """Fetch comments from a YouTube video."""
     youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=API_KEY)
@@ -72,7 +84,7 @@ class PDF(FPDF):
         self.cell(0, 10, f"Page {self.page_no()}", 0, 0, "C")
 
 
-def generate_pdf(comments, filtered_comments, keyword):
+def generate_pdf(video_title, video_link, comments, filtered_comments, keyword):
     """Generate a PDF report of the comments."""
     pdf = PDF()
 
@@ -83,8 +95,27 @@ def generate_pdf(comments, filtered_comments, keyword):
     pdf.add_page()
     pdf.set_font("DejaVuSans", size=12)
 
+    # Add video title and link
+    pdf.cell(
+        0, 10,
+        txt=f"YouTube Video: {video_title}",
+        ln=True,
+        align="C"
+    )
+    pdf.cell(
+        0, 10,
+        txt=f"Video Link: {video_link}",
+        ln=True,
+        align="C"
+    )
+
     # Add title
-    pdf.cell(0, 10, f"YouTube Comments Analysis for Keyword: {keyword}", 0, 1, "C")
+    pdf.cell(
+        0, 10,
+        txt=f"YouTube Comments Analysis for Keyword: {keyword}",
+        ln=True,
+        align="C"
+    )
 
     def add_comments_to_pdf(title, comments_list):
         pdf.set_font("DejaVuSans", style="B", size=12)
@@ -113,6 +144,9 @@ def generate_pdf(comments, filtered_comments, keyword):
 
 
 def main(video_id, keyword):
+    # Fetch video details
+    video_title, video_link = get_video_details(video_id)
+
     # Fetch comments from YouTube
     comments = get_comments(video_id)
 
@@ -124,7 +158,7 @@ def main(video_id, keyword):
     filtered_comments = filter_comments(comments, keyword)
 
     # Generate the PDF report
-    generate_pdf(comments, filtered_comments, keyword)
+    generate_pdf(video_title, video_link, comments, filtered_comments, keyword)
     print("PDF generated: youtube_comments_analysis.pdf")
 
 
