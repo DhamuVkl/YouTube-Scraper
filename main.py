@@ -1,25 +1,24 @@
 from googleapiclient.discovery import build
 from textblob import TextBlob
 from fpdf import FPDF
+import getpass
 
-# Set up your YouTube Data API key
-API_KEY = "AIzaSyDBxNBekeI2MPC7OfQXrfoLtKPT-zflpuo"
-YOUTUBE_API_SERVICE_NAME = "youtube"
-YOUTUBE_API_VERSION = "v3"
+# Function to get API key from user
+def get_api_key():
+    return getpass.getpass(prompt='Enter your YouTube Data API key: ')
 
+# Function to get API service name from user
+def get_api_service_name():
+    return input('Enter the API service name (default is "youtube"): ') or "youtube"
 
-def get_video_details(video_id):
-    """Fetch video details from YouTube."""
-    youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=API_KEY)
-    request = youtube.videos().list(part="snippet", id=video_id)
-    response = request.execute()
-    video = response["items"][0]["snippet"]
-    return video["title"], f"https://www.youtube.com/watch?v={video_id}"
+# Function to get API version from user
+def get_api_version():
+    version = input('Enter the API version (default is "v3"): ')
+    return version if version else "v3"
 
-
-def get_comments(video_id):
+def get_comments(video_id, api_key, api_service_name, api_version):
     """Fetch comments from a YouTube video."""
-    youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=API_KEY)
+    youtube = build(api_service_name, api_version, developerKey=api_key)
     comments = []
     request = youtube.commentThreads().list(
         part="snippet", videoId=video_id, maxResults=100, textFormat="plainText"
@@ -44,7 +43,6 @@ def get_comments(video_id):
 
     return comments
 
-
 def analyze_sentiment(comment):
     """Analyze the sentiment of a comment."""
     analysis = TextBlob(comment)
@@ -55,7 +53,6 @@ def analyze_sentiment(comment):
     else:
         return "Neutral"
 
-
 def filter_comments(comments, keyword):
     """Filter comments based on a keyword."""
     filtered_comments = []
@@ -64,11 +61,9 @@ def filter_comments(comments, keyword):
             filtered_comments.append(comment)
     return filtered_comments
 
-
 def sanitize_text(text):
     """Replace problematic characters with a space or other character."""
     return text.replace("\u2019", "'").encode("latin-1", "replace").decode("latin-1")
-
 
 class PDF(FPDF):
     def header(self):
@@ -80,8 +75,7 @@ class PDF(FPDF):
         self.set_font("DejaVuSans", size=8)
         self.cell(0, 10, f"Page {self.page_no()}", 0, 0, "C")
 
-
-def generate_pdf(video_title, video_link, comments, filtered_comments, keyword):
+def generate_pdf(comments, filtered_comments, keyword, video_id):
     """Generate a PDF report of the comments."""
     pdf = PDF()
 
@@ -92,18 +86,8 @@ def generate_pdf(video_title, video_link, comments, filtered_comments, keyword):
     pdf.add_page()
     pdf.set_font("DejaVuSans", size=12)
 
-    # Add video title and link
-    pdf.cell(0, 10, txt=f"YouTube Video Title: {video_title}", ln=True, align="C")
-    pdf.cell(0, 10, txt=f"Video Link: {video_link}", ln=True, align="C")
-
-    # Add title
-    pdf.cell(
-        0,
-        10,
-        txt=f"YouTube Comments Analysis for Keyword: {keyword}",
-        ln=True,
-        align="C",
-    )
+    # Add title with video link and title
+    pdf.cell(0, 10, f"YouTube Comments Analysis for Video: {video_id}", 0, 1, "C")
 
     def add_comments_to_pdf(title, comments_list):
         pdf.set_font("DejaVuSans", style="B", size=12)
@@ -130,13 +114,16 @@ def generate_pdf(video_title, video_link, comments, filtered_comments, keyword):
     # Save PDF
     pdf.output("youtube_comments_analysis.pdf")
 
-
 def main(video_id, keyword):
-    # Fetch video details
-    video_title, video_link = get_video_details(video_id)
+    # Get API key from user
+    api_key = get_api_key()
+
+    # Get API service name and version from user
+    api_service_name = get_api_service_name()
+    api_version = get_api_version()
 
     # Fetch comments from YouTube
-    comments = get_comments(video_id)
+    comments = get_comments(video_id, api_key, api_service_name, api_version)
 
     # Analyze sentiment for each comment
     for comment in comments:
@@ -146,11 +133,11 @@ def main(video_id, keyword):
     filtered_comments = filter_comments(comments, keyword)
 
     # Generate the PDF report
-    generate_pdf(video_title, video_link, comments, filtered_comments, keyword)
+    generate_pdf(comments, filtered_comments, keyword, video_id)
     print("PDF generated: youtube_comments_analysis.pdf")
 
-
 # Example usage
-video_id = "0XoTXOGHniY"  # Replace with the video ID you want to analyze
-keyword = "Elon Musk"  # Replace with the keyword you want to search for
-main(video_id, keyword)
+if __name__ == "__main__":
+    video_id = input("Enter the video ID: ")  # Get video ID from user
+    keyword = input("Enter the keyword to search for: ")  # Get keyword from user
+    main(video_id, keyword)
