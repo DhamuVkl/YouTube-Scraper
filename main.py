@@ -7,6 +7,7 @@ API_KEY = "AIzaSyDBxNBekeI2MPC7OfQXrfoLtKPT-zflpuo"
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 
+
 def get_comments(video_id):
     """Fetch comments from a YouTube video."""
     youtube = build(YOUTUBE_API_SERVICE_NAME, YOUTUBE_API_VERSION, developerKey=API_KEY)
@@ -34,6 +35,7 @@ def get_comments(video_id):
 
     return comments
 
+
 def analyze_sentiment(comment):
     """Analyze the sentiment of a comment."""
     analysis = TextBlob(comment)
@@ -44,6 +46,7 @@ def analyze_sentiment(comment):
     else:
         return "Neutral"
 
+
 def filter_comments(comments, keyword):
     """Filter comments based on a keyword."""
     filtered_comments = []
@@ -52,9 +55,11 @@ def filter_comments(comments, keyword):
             filtered_comments.append(comment)
     return filtered_comments
 
+
 def sanitize_text(text):
     """Replace problematic characters with a space or other character."""
-    return text.replace('\u2019', "'").encode('latin-1', 'replace').decode('latin-1')
+    return text.replace("\u2019", "'").encode("latin-1", "replace").decode("latin-1")
+
 
 class PDF(FPDF):
     def header(self):
@@ -66,13 +71,14 @@ class PDF(FPDF):
         self.set_font("DejaVuSans", size=8)
         self.cell(0, 10, f"Page {self.page_no()}", 0, 0, "C")
 
+
 def generate_pdf(comments, filtered_comments, keyword):
     """Generate a PDF report of the comments."""
     pdf = PDF()
 
     # Add the DejaVuSans font
-    pdf.add_font('DejaVuSans', '', 'fonts/DejaVuSans.ttf', uni=True)
-    pdf.add_font('DejaVuSans', 'B', 'fonts/DejaVuSans-Bold.ttf', uni=True)
+    pdf.add_font("DejaVuSans", "", "fonts/DejaVuSans.ttf", uni=True)
+    pdf.add_font("DejaVuSans", "B", "fonts/DejaVuSans-Bold.ttf", uni=True)
 
     pdf.add_page()
     pdf.set_font("DejaVuSans", size=12)
@@ -81,25 +87,30 @@ def generate_pdf(comments, filtered_comments, keyword):
     pdf.cell(0, 10, f"YouTube Comments Analysis for Keyword: {keyword}", 0, 1, "C")
 
     def add_comments_to_pdf(title, comments_list):
-        pdf.set_font("DejaVuSans", style='B', size=12)
+        pdf.set_font("DejaVuSans", style="B", size=12)
         pdf.cell(0, 10, title, 0, 1, "L")
         pdf.set_font("DejaVuSans", size=12)
         for comment in comments_list:
-            sanitized_text = sanitize_text(comment['text'])
+            sanitized_text = sanitize_text(comment["text"])
             pdf.multi_cell(0, 10, f"{comment['author']}: {sanitized_text}")
             pdf.ln()
 
     # Add Positive Comments
-    add_comments_to_pdf("Positive Comments:", [c for c in comments if c["sentiment"] == "Positive"])
+    add_comments_to_pdf(
+        "Positive Comments:", [c for c in comments if c["sentiment"] == "Positive"]
+    )
 
     # Add Negative Comments
-    add_comments_to_pdf("Negative Comments:", [c for c in comments if c["sentiment"] == "Negative"])
+    add_comments_to_pdf(
+        "Negative Comments:", [c for c in comments if c["sentiment"] == "Negative"]
+    )
 
     # Add Filtered Comments
     add_comments_to_pdf(f"Filtered Comments for Keyword: {keyword}", filtered_comments)
 
     # Save PDF
     pdf.output("youtube_comments_analysis.pdf")
+
 
 def main(video_id, keyword):
     # Fetch comments from YouTube
@@ -116,7 +127,8 @@ def main(video_id, keyword):
     generate_pdf(comments, filtered_comments, keyword)
     print("PDF generated: youtube_comments_analysis.pdf")
 
+
 # Example usage
-video_id = "uz7dY8qTFJw"  # Replace with the video ID you want to analyze
-keyword = "really"  # Replace with the keyword you want to search for
+video_id = "0XoTXOGHniY"  # Replace with the video ID you want to analyze
+keyword = "Elon"  # Replace with the keyword you want to search for
 main(video_id, keyword)
